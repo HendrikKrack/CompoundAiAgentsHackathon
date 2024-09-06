@@ -80,7 +80,7 @@ class PlaywrightAgent(ConversableAgent):
         {result}
         """
         for i, _ in enumerate(screenshots):
-            msg += f"""<img {screenshot_paths[i]}>"""
+            msg += f"""{screenshot_paths[i]}: <img {screenshot_paths[i]}>"""
 
         orchestrator.send(
             message=msg,
