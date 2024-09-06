@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}Hello World{% endblock title %}
+
+{% block body %}
+
+<div class="d-flex justify-content-center align-items-center sp-1" style="height: 100vh;">
+    <h1>This is Success Page 1</h1>
+    <a href="{% url 'home:final' %}" class="btn btn-primary">Go to Success Page 2</a>
+</div>
+{% endblock body %}

@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}Hello World{% endblock title %}
+
+{% block body %}
+
+<div class="d-flex justify-content-center align-items-center" style="height: 100vh;">
+    <div class="form-container p-5">
+        <form action="{% url 'home:login' %}" method="POST">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="inputEmail" class="form-label">Email address</label>
+                <input type="email" class="form-control" id="inputEmail" name="inputEmail" aria-describedby="emailHelp">
+            </div>
+            <div class="mb-3">
+                <label for="inputPassword" class="form-label">Password</label>
+                <input type="password" class="form-control" id="inputPassword" name="inputPassword">
+            </div>
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+    </div>
+</div>
+{% endblock body %}

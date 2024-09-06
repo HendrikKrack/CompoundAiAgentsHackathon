@@ -1,0 +1,12 @@
+.form-container {
+    border: 1px solid #ccc;
+    border-radius: 2rem;
+}
+
+.messages {
+    background-color: bisque;
+}
+
+.sp-1 {
+    flex-direction: column;
+}
