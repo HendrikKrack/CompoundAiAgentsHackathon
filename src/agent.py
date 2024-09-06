@@ -1,8 +1,6 @@
 import json
 import os
 
-import matplotlib.pyplot as plt
-
 from PIL import Image
 
 from autogen import Agent, AssistantAgent, ConversableAgent
@@ -77,36 +75,19 @@ class PlaywrightAgent(ConversableAgent):
                 screenshots.append(img)
                 screenshot_paths.append(img_path)
 
-        orchestrator.initiate_chat(
-            evaluator,
-            message=f"""
-            Here is the test result:
-            {result}
+        msg = f"""
+        Here is the test result:
+        {result}
+        """
+        for i, _ in enumerate(screenshots):
+            msg += f"""<img {screenshot_paths[i]}>"""
 
-            Here are the screenshots:
-            <img https://th.bing.com/th/id/R.422068ce8af4e15b0634fe2540adea7a?rik=y4OcXBE%2fqutDOw&pid=ImgRaw&r=0>
-            """,
-            # request_reply=True,
+        orchestrator.send(
+            message=msg,
+            recipient=evaluator,
+            request_reply=True,
         )
-        # orchestrator.send(
-        #     message=f"""
-        #     Here is the test result:
-        #     {result}
-
-        #     Here are the screenshots:
-        #     <img https://th.bing.com/th/id/R.422068ce8af4e15b0634fe2540adea7a?rik=y4OcXBE%2fqutDOw&pid=ImgRaw&r=0>
-        #     """,
-        #     recipient=evaluator,
-        #     request_reply=True,
-        # )
 
         feedback = orchestrator._oai_messages[evaluator][-1]["content"]
-        # orchestrator.send(
-        #     message="Here is the feedback to your figure. Please improve! Save the result to `result.jpg`\n"
-        #     + feedback,
-        #     recipient=player,
-        #     request_reply=True,
-        # )
-
 
         return True, feedback
