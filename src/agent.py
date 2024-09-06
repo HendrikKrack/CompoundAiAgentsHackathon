@@ -1,3 +1,4 @@
+import json
 import os
 
 import matplotlib.pyplot as plt
@@ -26,11 +27,11 @@ class PlaywrightAgent(ConversableAgent):
         user_question = messages[-1]["content"]
 
         ### Define the agents
-        commander = AssistantAgent(
+        orchestrator = AssistantAgent(
             name="Orchestrator",
             human_input_mode="NEVER",
             max_consecutive_auto_reply=10,
-            system_message="Help me run the code, and tell other agents it is in the <img result.jpg> file location.",
+            system_message="Help me run the test by coordinating with other agents.",
             is_termination_msg=lambda x: x.get("content", "").rstrip().endswith("TERMINATE"),
             code_execution_config={"last_n_messages": 3, "work_dir": self.working_dir, "use_docker": False},
             llm_config=self.llm_config,
@@ -38,9 +39,13 @@ class PlaywrightAgent(ConversableAgent):
 
         evaluator = MultimodalConversableAgent(
             name="Evaluator",
-            system_message="""Criticize the input figure. How to replot the figure so it will be better? Find bugs and issues for the figure.
-            Pay attention to the color, format, and presentation. Keep in mind of the reader-friendliness.
-            If you think the figures is good enough, then simply say NO_ISSUES""",
+            system_message="""You are given Playwright test result along with screenshots of the test execution
+            in the browser. You are also given a list of test test expectations. You are responsible for assessing
+            whether all test expectations are met given the test results and screenshots of the test execution.
+            For each test expectation, say whether it was successfully passed or failed. If failed, provide a detailed
+            explanation of why it failed given the test results and screenshots of the test execution. You MUST output
+            your response in JSON format.
+            """,
             llm_config=self.llm_config,
             human_input_mode="NEVER",
             max_consecutive_auto_reply=1,
@@ -54,35 +59,54 @@ class PlaywrightAgent(ConversableAgent):
 
         player.update_system_message(
             player.system_message
-            + "ALWAYS save the figure in `result.jpg` file. Tell other agents it is in the <img result.jpg> file location."
+            + "ALWAYS save the test result and screenshots in the result directory. Tell other agents it is in the 'result' directory."
         )
 
-        # Data flow begins
-        commander.initiate_chat(player, message=user_question)
-        img = Image.open(os.path.join(self.working_dir, "result.jpg"))
-        plt.imshow(img)
-        plt.axis("off")  # Hide the axes
-        plt.show()
+        # # Data flow begins
+        # orchestrator.initiate_chat(player, message=user_question)
+        # Open results json file
+        with open(os.path.join(self.working_dir, "result.json"), "r") as f:
+            result = json.load(f)
+        # Open all screenshots
+        screenshots = []
+        screenshot_paths = []
+        for filename in os.listdir(self.working_dir):
+            if filename.lower().endswith(('.png', '.jpg', '.jpeg')) and filename != 'result.jpg':
+                img_path = os.path.join(self.working_dir, filename)
+                img = Image.open(img_path)
+                screenshots.append(img)
+                screenshot_paths.append(img_path)
 
-        for i in range(self._n_iters):
-            commander.send(
-                message=f"Improve <img {os.path.join(self.working_dir, 'result.jpg')}>",
-                recipient=evaluator,
-                request_reply=True,
-            )
+        orchestrator.initiate_chat(
+            evaluator,
+            message=f"""
+            Here is the test result:
+            {result}
 
-            feedback = commander._oai_messages[evaluator][-1]["content"]
-            if feedback.find("NO_ISSUES") >= 0:
-                break
-            commander.send(
-                message="Here is the feedback to your figure. Please improve! Save the result to `result.jpg`\n"
-                + feedback,
-                recipient=player,
-                request_reply=True,
-            )
-            img = Image.open(os.path.join(self.working_dir, "result.jpg"))
-            plt.imshow(img)
-            plt.axis("off")  # Hide the axes
-            plt.show()
+            Here are the screenshots:
+            <img https://th.bing.com/th/id/R.422068ce8af4e15b0634fe2540adea7a?rik=y4OcXBE%2fqutDOw&pid=ImgRaw&r=0>
+            """,
+            # request_reply=True,
+        )
+        # orchestrator.send(
+        #     message=f"""
+        #     Here is the test result:
+        #     {result}
 
-        return True, os.path.join(self.working_dir, "result.jpg")
+        #     Here are the screenshots:
+        #     <img https://th.bing.com/th/id/R.422068ce8af4e15b0634fe2540adea7a?rik=y4OcXBE%2fqutDOw&pid=ImgRaw&r=0>
+        #     """,
+        #     recipient=evaluator,
+        #     request_reply=True,
+        # )
+
+        feedback = orchestrator._oai_messages[evaluator][-1]["content"]
+        # orchestrator.send(
+        #     message="Here is the feedback to your figure. Please improve! Save the result to `result.jpg`\n"
+        #     + feedback,
+        #     recipient=player,
+        #     request_reply=True,
+        # )
+
+
+        return True, feedback
